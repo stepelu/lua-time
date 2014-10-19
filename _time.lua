@@ -14,11 +14,9 @@
 -- license: full text in file LICENSE.TXT in the library's root folder.
 --------------------------------------------------------------------------------
 
--- TODO: Implement slep for all archs.
--- TODO: Implement nowutc, nowlocal for unix.
-
 local ffi  = require "ffi"
 
+local C = ffi.C
 local format = string.format
 local abs, floor, min = math.abs, math.floor, math.min
 local type, new, istype, tonumber = type, ffi.new, ffi.istype, tonumber
@@ -385,18 +383,12 @@ end
 -- System-dependent functions --------------------------------------------------
 local nowlocal, nowutc, sleep
 
-if jit.os == "Windows" then
+if jit.os == "Windows" then -- On Windows sizeof(long) == 4 on both x86 and x64.
   ffi.cdef[[
-  typedef unsigned long DWORD;
+  typedef unsigned long  DWORD;
   typedef unsigned short WORD;
-  typedef unsigned long long ULONGLONG;
-  
-  typedef struct {
-    DWORD dwLowDateTime;
-    DWORD dwHighDateTime;
-  } FILETIME, *PFILETIME;
-  
-  typedef struct {
+
+  typedef struct _SYSTEMTIME {
     WORD wYear;
     WORD wMonth;
     WORD wDayOfWeek;
@@ -406,52 +398,107 @@ if jit.os == "Windows" then
     WORD wSecond;
     WORD wMilliseconds;
   } SYSTEMTIME, *PSYSTEMTIME;
-  
-  typedef union _ULARGE_INTEGER {
-    struct {
-      DWORD LowPart;
-      DWORD HighPart;
-    };
-    struct {
-      DWORD LowPart;
-      DWORD HighPart;
-    } u;
-    ULONGLONG QuadPart;
-  } ULARGE_INTEGER, *PULARGE_INTEGER;
-  
-  void GetSystemTimeAsFileTime(PFILETIME lpSystemTimeAsFileTime);
-  bool FileTimeToSystemTime(const FILETIME *lpFileTime,
-    PSYSTEMTIME lpSystemTime);
-  void GetLocalTime(PSYSTEMTIME lpSystemTime);
+
+  void GetLocalTime(
+    PSYSTEMTIME lpSystemTime
+  );
+  void GetSystemTime(
+    PSYSTEMTIME lpSystemTime
+  );
+  void Sleep(
+    DWORD dwMilliseconds
+  );
   ]]
   
-  local ft_ct = ffi.typeof("FILETIME")
-  local st_ct = ffi.typeof("SYSTEMTIME")
-  local ul_ct = ffi.typeof("ULARGE_INTEGER")
-  local C = ffi.C
-  local ftoffset = 199222329599999000ULL
-  
-  local st = st_ct() -- Buffer.
+  local st = ffi.new("SYSTEMTIME")
+
   nowlocal = function()
-    C.GetLocalTime(st)
+    -- Resolution: 1 millisecond.
+    -- Accuracy  : ~ 15 milliseconds on old Windows.
+    C.GetLocalTime(st) 
     return d_ct(st.wYear, st.wMonth, st.wDay) + p_ct(st.wHour, st.wMinute,
       st.wSecond, st.wMilliseconds*1000)
   end
   
-  local ul = ul_ct() -- Buffer.
-  local function ft_to_int64(x)
-    ul.LowPart = x.dwLowDateTime
-    ul.HighPart = x.dwHighDateTime
-    return ul.QuadPart
-  end
-  
-  local ft = ft_ct() -- Buffer.
-  -- No daylight adjustment, potentially faster and more precise.
   nowutc = function()
-    C.GetSystemTimeAsFileTime(ft)
-    return d_64(ft_to_int64(ft)/10 + ftoffset)
+    -- Resolution: 1 millisecond.
+    -- Accuracy  : ~ 15 milliseconds on old Windows.
+     C.GetSystemTime(st) 
+    return d_ct(st.wYear, st.wMonth, st.wDay) + p_ct(st.wHour, st.wMinute,
+      st.wSecond, st.wMilliseconds*1000)
   end
-end -- Windows.
+
+  sleep = function(p)
+    if p < p_ct() then
+      error("cannot sleep a negative amount of time")
+    end
+    C.Sleep(p:ticks()/1000)
+  end
+
+else -- Linux and OSX.
+  ffi.cdef[[
+  typedef long time_t;
+  typedef int useconds_t;
+
+  typedef struct timeval {
+    long tv_sec;
+    int tv_usec;
+  } timeval;
+  typedef struct tm {
+    int tm_sec;
+    int tm_min;
+    int tm_hour;
+    int tm_mday;
+    int tm_mon;
+    int tm_year;
+    int tm_wday;
+    int tm_yday;
+    int tm_isdst;
+    long tm_gmtoff;
+    char *tm_zone;
+  } tm;
+
+  int gettimeofday(
+    struct timeval * restrict, 
+    void * restrict
+  );
+  struct tm *localtime(
+    const time_t *
+  );
+  int usleep(
+    useconds_t useconds
+  );
+  ]]
+
+  -- C.host_get_clock_service it's slower and we don't need higher resolution.
+  -- C.mach_absolute_time does not report real clock.
+  local epoch  = d_ct(1970, 1, 1)
+  local tv = ffi.new("timeval[1]")
+  local tt = ffi.new("time_t[1]")
+
+  nowlocal = function()
+    -- Resolution: 1 microsecond.
+    C.gettimeofday(tv, nil)
+    tt[0] = tv[0].tv_sec
+    local tm = C.localtime(tt)
+    return d_ct(1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday) +
+           p_ct(tm.tm_hour, tm.tm_min, tm.tm_sec, tv[0].tv_usec)
+  end
+
+  nowutc = function()
+    -- Resolution: 1 microsecond.
+    C.gettimeofday(tv, nil)
+    -- Tonumber needed as on Linux/OSX sizeof(long) == 8 on x64. 
+    return epoch + p_ct(0, 0, tonumber(tv[0].tv_sec), tv[0].tv_usec)
+  end
+
+ sleep = function(p)
+    if p < p_ct() then
+      error("cannot sleep a negative amount of time")
+    end
+    C.usleep(p:ticks())
+  end
+end
 
 return {
   period       = p_ct,   
