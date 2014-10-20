@@ -3,16 +3,18 @@ Time
 
 This is a MIT licensed library for the manipulation of dates and periods according to the Gregorian calendar, i.e. the internationally accepted calendar for most uses. The library is built around two concepts:
 
-+ **date**: a specific point in time, for example yesterday at 3:00 PM;
-+ **period**: a duration of time, for example three hours.
++ **date**: a specific point in time, for example yesterday at 3:00 PM
++ **period**: a duration of time, for example three hours
 
 with the following characteristics:
 
-+ dates and periods have microsecond (1-millionth of a second) precision;
-+ leap years are taken into account;
-+ all years have the same number of seconds, i.e. there are no leap seconds.
++ dates and periods have microsecond (1-millionth of a second) precision
++ leap years are taken into account
++ all years have the same number of seconds, i.e. there are no leap seconds
 
-Code snippet example:
+All of the date-related functionalities are based on Claus Tøndering's calendar algorithms and the corresponding C implementation.
+
+The following example presents the main features of this library:
 
 ```lua
 local time = require "time"
@@ -37,6 +39,8 @@ assert(d2 > d1)
  
 print(time.nowlocal()) --> Now, according to local clock.
 print(time.nowutc())   --> Now, according to UTC clock.
+ 
+time.sleep(time.seconds(1)) --> Sleep for 1 second.
 ```
 
-The Sci library is part of the <a href="http://www.scilua.org">SciLua</a> framework which aims to offer a framework for numerical computing which combines the ease of use of scripting languages (Matlab, R, ...) with the high performance of compiled languages (C/C++, Fortran, ...). Please refer to the project's homepage for more information.
+Info: http://scilua.org/time.html
