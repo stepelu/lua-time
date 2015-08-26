@@ -1,17 +1,10 @@
---------------------------------------------------------------------------------
--- Metadata for Time.
--- 
--- Copyright (C) 2011-2014 Stefano Peluchetti. All rights reserved.
---
--- Features, documentation and more: http://www.scilua.org .
--- 
--- This file is part of the Time library, which is released under the MIT 
--- license: full text in file LICENSE.TXT in the library's root folder.
---------------------------------------------------------------------------------
-
 return {
-  version = "1.0.0",
+  version = "1.0.1",
   require = {
-    xsys = "1.0",
-  }
+    luajit = "2.0",
+    xsys   = "1.0",
+  },
+  license = "MIT <http://opensource.org/licenses/MIT>",
+  homepage = "http://scilua.org/time.html",
+  description = "TIME - Dates and Periods in Lua",
 }
