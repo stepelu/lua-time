@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- Forwarder for time module.
 --
--- Copyright (C) 2011-2014 Stefano Peluchetti. All rights reserved.
+-- Copyright (C) 2011-2015 Stefano Peluchetti. All rights reserved.
 --
 -- Features, documentation and more: http://www.scilua.org .
 -- 
