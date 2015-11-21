@@ -18,7 +18,7 @@ local ffi  = require "ffi"
 
 local C = ffi.C
 local format = string.format
-local abs, floor, min = math.abs, math.floor, math.min
+local floor, min = math.floor, math.min
 local type, new, istype, tonumber = type, ffi.new, ffi.istype, tonumber
 
 local int64_ct = ffi.typeof("int64_t")
@@ -400,8 +400,9 @@ local nowlocal, nowutc, sleep
 
 if jit.os == "Windows" then -- On Windows sizeof(long) == 4 on both x86 and x64.
   ffi.cdef[[
-  typedef unsigned long  DWORD;
-  typedef unsigned short WORD;
+  typedef unsigned long    DWORD;
+  typedef unsigned short   WORD;
+  typedef unsigned __int64 ULONGLONG;
 
   typedef struct _SYSTEMTIME {
     WORD wYear;
@@ -414,11 +415,34 @@ if jit.os == "Windows" then -- On Windows sizeof(long) == 4 on both x86 and x64.
     WORD wMilliseconds;
   } SYSTEMTIME, *PSYSTEMTIME;
 
+  typedef union _ULARGE_INTEGER {
+    struct {
+      DWORD LowPart;
+      DWORD HighPart;
+    };
+    struct {
+      DWORD LowPart;
+      DWORD HighPart;
+    } u;
+    ULONGLONG QuadPart;
+  } ULARGE_INTEGER, *PULARGE_INTEGER;
+
+  typedef struct _FILETIME {
+    DWORD dwLowDateTime;
+    DWORD dwHighDateTime;
+  } FILETIME, *PFILETIME;
+
   void GetLocalTime(
     PSYSTEMTIME lpSystemTime
   );
-  void GetSystemTime(
-    PSYSTEMTIME lpSystemTime
+  //void GetSystemTime(
+  //  PSYSTEMTIME lpSystemTime
+  //);
+  void GetSystemTimeAsFileTime(
+    PFILETIME lpSystemTimeAsFileTime
+  );
+  void GetSystemTimeAsPreciseFileTime(
+    PFILETIME lpSystemTimeAsFileTime
   );
   void Sleep(
     DWORD dwMilliseconds
@@ -426,21 +450,30 @@ if jit.os == "Windows" then -- On Windows sizeof(long) == 4 on both x86 and x64.
   ]]
   
   local st = ffi.new("SYSTEMTIME")
+  local ft = ffi.new("FILETIME")
+  local ul = ffi.new("ULARGE_INTEGER")
 
   nowlocal = function()
-    -- Resolution: 1 millisecond.
-    -- Accuracy  : ~ 15 milliseconds on old Windows.
     C.GetLocalTime(st) 
     return d_ct(st.wYear, st.wMonth, st.wDay) + p_ct(st.wHour, st.wMinute,
       st.wSecond, st.wMilliseconds*1000)
   end
-  
+
+  local epoch_offset = d_ct(1601, 1, 1):ticks()
+  local function if_available(lib, fname)
+    local ok, f = pcall(function() return lib[fname] end)
+    return ok and f
+  end
+  local get_system_time = if_available(C, 'GetSystemTimeAsPreciseFileTime')
+    or C.GetSystemTimeAsFileTime
+
   nowutc = function()
-    -- Resolution: 1 millisecond.
-    -- Accuracy  : ~ 15 milliseconds on old Windows.
-     C.GetSystemTime(st) 
-    return d_ct(st.wYear, st.wMonth, st.wDay) + p_ct(st.wHour, st.wMinute,
-      st.wSecond, st.wMilliseconds*1000)
+    -- Resolution: 1 microsecond.
+    -- Accuracy  : 1 millisecond up to Windows 7, higher otherwise.
+    get_system_time(ft)
+    ul.LowPart  = ft.dwLowDateTime
+    ul.HighPart = ft.dwHighDateTime
+    return new(d_ct, epoch_offset + ul.QuadPart/10)
   end
 
   sleep = function(p)
@@ -487,12 +520,11 @@ else -- Linux and OSX.
 
   -- C.host_get_clock_service it's slower and we don't need higher resolution.
   -- C.mach_absolute_time does not report real clock.
-  local epoch  = d_ct(1970, 1, 1)
+  local epoch_offset  = d_ct(1970, 1, 1):ticks()
   local tv = ffi.new("timeval[1]")
   local tt = ffi.new("time_t[1]")
 
   nowlocal = function()
-    -- Resolution: 1 microsecond.
     C.gettimeofday(tv, nil)
     tt[0] = tv[0].tv_sec
     local tm = C.localtime(tt)
@@ -502,9 +534,9 @@ else -- Linux and OSX.
 
   nowutc = function()
     -- Resolution: 1 microsecond.
+    -- Accuracy  : 1 microsecond.
     C.gettimeofday(tv, nil)
-    -- Tonumber needed as on Linux/OSX sizeof(long) == 8 on x64. 
-    return epoch + p_ct(0, 0, tonumber(tv[0].tv_sec), tv[0].tv_usec)
+    return new(d_ct, epoch_offset + tv[0].tv_sec*1000000LL + tv[0].tv_usec)
   end
 
  sleep = function(p)
