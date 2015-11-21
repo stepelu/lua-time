@@ -130,6 +130,21 @@ local p_mt = {
   parts = function(self)
     return self:hours(), self:minutes(), self:seconds(), self:microseconds()
   end,
+  tomicroseconds = function(self)
+    return tonumber(self._ticks)
+  end,
+  tomilliseconds = function(self)
+    return tonumber(self._ticks)/1e3
+  end,
+  toseconds = function(self)
+    return tonumber(self._ticks)/1e6
+  end,
+  tominutes = function(self)
+    return tonumber(self._ticks)/(1e6*60)
+  end,
+  tohours = function(self)
+    return tonumber(self._ticks)/(1e6*60*60)
+  end,
 }
 p_mt.__index = p_mt
 
