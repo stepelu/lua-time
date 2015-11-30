@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta charset="utf-8">
+  <title>Time</title>
+  <meta name="description" content="">
+  <meta name="author" content="Stefano Peluchetti">
+
+  <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href='http://fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
+
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="dist/css/normalize.css">
+  <link rel="stylesheet" href="dist/css/skeleton.css">
+  <link rel="stylesheet" href="css/custom.css">
+
+  <!-- Scripts
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=lua"></script>
+  <link rel="stylesheet" href="css/github-prettify-theme.css">
+
+  <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="icon" type="image/png" href="dist/images/favicon.png">
+
+</head>
+<body class="code-snippets-visible">
+
+  <!-- Primary Page Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <div class="container">
+
+    <!-- Header
+    –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <div class="header">
+      <h2 class="title">TIME - Dates and Periods in Lua</h2>
+    </div>
+
+    <!-- Content
+    –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+
+    <div class="docs-section" id="intro">
+      <p>A module for the manipulation of dates and periods according to the <a href="http://en.wikipedia.org/wiki/Gregorian_calendar">Gregorian calendar</a>.</p> 
+
+      <p>Concepts and features:</p>
+
+      <div class="docs-example">
+        <div class="row">
+          <div class="six columns">
+            <ul>
+            <li><code>date</code>: a specific point in time (yesterday at 3:00 PM)</li>
+            <li><code>period</code>: a duration of time (3 hours)</li>
+            </ul>
+          </div>
+          <div class="six columns">
+            <ul>
+            <li>microsecond (1-millionth of a second) precision</li>
+            <li>leap years are taken into account</li>
+            <li>leap seconds <strong>not</strong> taken into account</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+<!-- CODE EXAMPLE ———————————————————————————————————————— -->
+<pre class="code-example">
+<code class="code-example-body prettyprint lang-lua">local time = require "time"
+
+local d1 = time.date(2012, 4, 30) -- A date at 00:00 AM.
+
+-- Arithmetic operators are supported:
+local p1 = time.hours(13) + time.minutes(30) -- A period.
+local d2 = d1 + p1 -- The same date above at 1:30 PM.
+assert(d2 - d1 == p1)
+
+-- To / from strings, same functionality for periods:
+local datestr = "2012-04-30T13:30:00.000000"
+local d3 = time.todate(datestr)
+assert(d2 == d3)
+assert(tostring(d2) == datestr)
+
+-- Comparison operators are supported:
+assert(time.minutes(1) == time.seconds(60))
+assert(time.minutes(1) >  time.seconds(59))
+assert(d2 > d1)
+
+print(time.nowlocal()) -- Now, according to local clock.
+print(time.nowutc())   -- Now, according to UTC clock.
+
+time.sleep(time.seconds(1)) -- Sleep for 1 second.
+</code>
+</pre>
+<!-- ————————————————————————————————————————————————————— -->
+
+      <p>This module is based on Claus Tøndering's <a href="http://www.tondering.dk/main/index.php/calendar-information">calendar algorithms</a> and the corresponding C implementation.</p>
+
+    </div>
+
+    <div class="docs-section" id="validity">
+      <h5 class = "docs-header">Validity of Dates and Periods</h5>
+
+      <p>The year component of each date must belong to the range [1582, 9999] and all dates must be valid (for example 2012-02-31 is not). If these conditions are not satisfied an error is thrown.</p> 
+
+      <p>Attempts to construct periods outside of the supported range [-290000 years, +290000 years] yield undefined results. No attempt is made to detect such mistakes.</p>
+    </div>
+
+    <div class="docs-section" id="operators">
+      <h5 class = "docs-header">Indexing, Operators and Reversibility</h5>
+
+      <p>All comparisons operator are supported and both sides of a given relation must either be dates or periods (it is an error to compare a date with a period).</p> 
+
+      <p>The following table list the supported arithmetic operators, the resulting objects and whether the operators are reversible (more on this after the table). By <code>integer</code> we refer to a Lua number with no fractional part and by <code>months</code> and <code>years</code> we refer to the objects obtained by calls to <a href="#months"><code>time.months()</code></a> and <a href="#years"><code>time.years()</code></a>.</p>
+
+      <table class="u-full-width">
+      <tr>
+      <th>Operation</th><th>Result</th><th>Reversible</th><th>Note</th></tr>
+      <tr>
+      <td><code>period &plusmn; period</code></td><td><code>period</code></td><td>yes</td><td>commutative</td></tr>
+      <tr>
+      <td><code>period * integer</code></td><td><code>period</code></td><td>yes</td><td>commutative</td></tr>
+      <tr>
+      <td><code>integer * period</code></td><td><code>period</code></td><td>yes</td><td>commutative</td></tr>
+      <tr>
+      <td><code>period / integer</code></td><td><code>period</code></td><td>no</td><td></td></tr>
+      <tr>
+      <td><code>period / period</code></td><td><code>number</code></td><td>no</td><td>fraction</td></tr>
+      <tr>
+      <td><code>-period</code></td><td><code>period</code></td><td>yes</td><td></td></tr>
+      <tr>
+      <td><code>date &plusmn; period</code></td><td><code>date</code></td><td>yes</td><td></td></tr>
+      <tr>
+      <td><code>date &plusmn; months</code></td><td><code>date</code></td><td>no (yes if day &le; 28)</td><td></td></tr>
+      <tr>
+      <td><code>date &plusmn; years</code></td><td><code>date</code></td><td>no (yes if day &le; 28)</td><td></td></tr>
+      </table>
+
+      <p>By reversibility we mean being able perform the inverse operation and get back the starting value:</p>
+
+<!-- CODE EXAMPLE ———————————————————————————————————————— -->
+<pre class="code-example">
+<code class="code-example-body prettyprint lang-lua">local startp = time.seconds(13)
+assert(startp == (startp + time.minutes(12)) - time.minutes(12))
+assert(startp == (startp * 3) / 3)
+assert(startp == -(-startp))
+
+local startd = time.date(2012, 3, 3)
+assert(startd == (startd - time.days(65)) + time.days(65))
+</code>
+</pre>
+<!-- ————————————————————————————————————————————————————— -->
+
+    <p>This behavior is not guaranteed for divisions and for shifts by months or years. When performing such shifts, if the day exceeds the end of month of the resulting date (which makes the resulting date not valid) a cap is applied equal to the end of month itself. Examples:</p>
+
+<!-- CODE EXAMPLE ———————————————————————————————————————— -->
+<pre class="code-example">
+<code class="code-example-body prettyprint lang-lua">local startp = time.microseconds(13)
+assert(startp ~= (startp / 2) * 2)
+print(time.date(2012, 1, 31) + time.months(1)) -- 2012-02-29
+</code>
+</pre>
+<!-- ————————————————————————————————————————————————————— -->
+
+    </div>
+
+    <div class="docs-section" id="api">
+      <h5 class = "docs-header">API</h5>
+
+      <p>In the following we report the interface of the module. For brevity considerations <code>p</code> refers to an instance of a period and <code>d</code> to an instance of a date. We say that hours, minutes, seconds and microseconds are normalized when they belong respectively to the following ranges: &plusmn;23, &plusmn;59, &plusmn;59, &plusmn;999999. Normalization is achieved by increasing as much as required bigger count units. For instance 129 seconds is normalized to 2 minutes and 9 seconds.</p>
+
+      <div class="api-section" id="time">
+        <h6 class="api-header">time = require "time"</h6>
+        <p>Returns the loaded module (no global variable is set).</p>
+      </div>
+
+      <div class="api-section" id="periodct">
+        <h6 class="api-header">p = time.weeks(n)<br>p = time.days(n)<br>p = time.hours(n)<br>p = time.minutes(n)<br>p = time.seconds(n)<br>p = time.milliseconds(n)<br>p = time.microseconds(n)<br>p = time.period(hours = 0, minutes = 0, seconds = 0, microseconds = 0)</h6>
+        <p>Constructs a period. All the arguments must be integers. The function <code>time.period()</code> is equivalent to constructing the period by calling each corresponding constructor function and argument (for example <code>minutes = 3</code> corresponds to <code>time.minutes(3)</code>) and by taking the sum.</p>
+      </div>
+
+      <div class="api-section" id="tostringperiod">
+        <h6 class="api-header">str = tostring(p)</h6>
+        <p>Returns the string representation of a period, which follows the format <code>hours:mm:ss.ffffff</code> where <code>hours</code> represents the number of hours and occupies 1 or more characters. For the remaining part of the string the number of repetitions of the same character specifies the number of characters used by a given <strong>normalized</strong> field: <code>m</code> for minutes, <code>s</code> for seconds, <code>f</code> for microseconds.</p>
+      </div>
+
+      <div class="api-section" id="toperiod">
+        <h6 class="api-header">p = time.toperiod(str or int64)</h6>
+        <p>The argument must be a string or a <code>cdata&lt;int64_t&gt;</code>. In the first case it constructs a period from its string representation which must follow the format above. In the second case the period is constructed considering the argument as the <strong>total</strong> (unnormalized) number of microseconds.</p>
+      </div>
+
+      <div class="api-section" id="periodget">
+        <h6 class="api-header">h = p:hours()<br>m = p:minutes()<br>s = p:seconds()<br>i = p:microseconds()<br>h, m, s, i =  p:parts()</h6>
+        <p>Return the number of <strong>normalized</strong> units for each period component. The function <code>p:parts()</code> is equivalent to calling each of the remaining functions in the reported order and returning all the results.</p> 
+      </div>
+
+      <div class="api-section" id="periodconvert">
+        <h6 class="api-header">fh = p:tohours()<br>fm = p:tominutes()<br>fs = p:toseconds()<br>fl = p:tomilliseconds()<br>fi = p:tomicroseconds()</h6>
+        <p>Converts the period to the requested fractional units as Lua numbers. Note that <code>p:tomicroseconds()</code> is not equivalent to <code>p:ticks()</code> as the latter returns a <code>cdata&lt;int64_t&gt;</code>.</p> 
+      </div>
+
+      <div class="api-section" id="periodticks">
+        <h6 class="api-header">int64 = p:ticks()</h6>
+        <p>Returns a <code>cdata&lt;int64_t&gt;</code> representing the <strong>total</strong> number of microseconds composing the period.</p>
+      </div>
+
+      <div class="api-section" id="sleep">
+        <h6 class="api-header">time.sleep(p)</h6>
+        <p>Wait for a period <code>p</code>, which must represent a nonnegative amount of time, before continuing execution.</p>
+      </div>
+
+      <div class="api-section" id="years">
+        <h6 class="api-header">years = time.years(n)</h6>
+        <p>Returns an object representing <code>n</code> years, where <code>n</code> must be an integer number. It is only used to shift dates via the <code>+</code> and <code>-</code> operators. No other operation is supported for this object.</p>
+      </div>
+
+      <div class="api-section" id="months">
+        <h6 class="api-header">months = time.months(n)</h6>
+        <p>Returns an object representing <code>n</code> months, where <code>n</code> must be an integer number. It is only used to shift dates via the <code>+</code> and <code>-</code> operators. No other operation is supported for this object.</p>
+      </div>
+
+      <div class="api-section" id="datect">
+        <h6 class="api-header">d = time.date(year, month, day)</h6>
+        <p>Constructs a date at 00:00 AM (i.e. at the beginning of the given day) from the combination <code>year</code>, <code>month</code>, <code>day</code>. Dates corresponding to different times of the day are easily obtained by summing the returned value to appropriate periods.</p>
+      </div>
+
+      <div class="api-section" id="nowlocal">
+        <h6 class="api-header">d = time.nowlocal()</h6>
+        <p>Returns a date representing the local time at the moment of the call: it takes into account the time zone and the eventual daylight saving adjustment.</p>
+      </div>
+
+      <div class="api-section" id="nowutc">
+        <h6 class="api-header">d = time.nowutc()</h6>
+        <p>Returns a date representing the the UTC time at the moment of the call: it does <strong>not</strong> take into account the time zone and the eventual daylight saving adjustment. It's potentially more precise and efficient than <a href="#nowlocal"><code>time.nowlocal()</code></a>.</p>
+      </div>
+
+      <div class="api-section" id="tostringdate">
+        <h6 class="api-header">str = tostring(d)</h6>
+        <p>Returns the string representation of a date, which follows the format <code>YYYY-MM-DDThh:mm:ss.ffffff</code> where the number of repetitions of the same character specifies the number of characters used by a given (eventually) <strong>normalized</strong> field: <code>Y</code> for year, <code>M</code> for month, <code>D</code> for day (<code>T</code> is a separator like <code>-</code>, <code>:</code> and <code>.</code>), <code>h</code> for hours, <code>m</code> for minutes, <code>s</code> for seconds, <code>f</code> for microseconds.</p>
+      </div>
+
+      <div class="api-section" id="todate">
+        <h6 class="api-header">d = time.todate(str or int64)</h6>
+        <p>The argument must be a string or a <code>cdata&lt;int64_t&gt;</code>. In the first case it constructs a date from its string representation which must follow the format above. In the second case the <code>cdata&lt;int64_t&gt;</code> corresponds to an implementation-defined internal representation of dates and must be obtained by a previous call to <a href="#dateticks"><code>d:ticks()</code></a>. This internal representation is consistent across all architectures and operating systems.</p>
+      </div>
+
+      <div class="api-section" id="dateget">
+        <h6 class="api-header">Y = d:year()<br>M = d:month()<br>D = d:day()<br>Y, M, D = d:ymd()</h6>
+        <p>Returns the values of the year, month, day part of a date. The function <code>d:ymd()</code> is equivalent to calling each of the remaining functions in the reported order and returning all the results.</p>
+      </div>
+
+      <div class="api-section" id="dateticks">
+        <h6 class="api-header">int64 = d:ticks()</h6>
+        <p>Returns the <code>cdata&lt;int64_t&gt;</code> internal representation of the date which corresponds to the <strong>total</strong> number of microseconds lapsed since a constant implementation defined date.</p>
+      </div>
+
+      <div class="api-section" id="dateperiod">
+        <h6 class="api-header">p = d:period()</h6>
+        <p>Returns the period corresponding to the time elapsed since the beginning of the date's day at 00:00 AM.</p>
+      </div>
+
+      <div class="api-section" id="isleapyear">
+        <h6 class="api-header">bool = time.isleapyear(year)<br>bool = d:isleapyear()</h6>
+        <p>Returns whether the given year or the year component of a given date, is a leap year.</p>
+      </div>
+
+      <div class="api-section" id="endofmonth">
+        <h6 class="api-header">day = time.endofmonth(year, month)<br>day = d:endofmonth()</h6>
+        <p>Returns the day corresponding to the end of the month (in a given year). The second function uses the year and month components of a given date.</p>
+      </div>
+
+      <div class="api-section" id="weekday">
+        <h6 class="api-header">n = time.weekday(year, month, day)<br>n = d:weekday()</h6>
+        <p>Returns the weekday number (from 1 for Monday to 7 for Sunday) corresponding to a given date or to a given <code>year</code>, <code>month</code>, <code>day</code> combination.</p>
+      </div>
+
+    </div>
+
+  </div>
+
+<!-- End Document
+–––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>
