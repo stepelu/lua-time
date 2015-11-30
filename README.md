@@ -51,4 +51,4 @@ Alternatively, manually install this module making sure that all dependencies li
 
 ## Documentation
 
-Refer to the [official documentation](http://scilua.org/time.html) which is mirrored in the [`__doc`](__doc/index.html) sub-folder.
+Refer to the [official documentation](http://scilua.org/time.html) which is mirrored in the [`__doc`](__doc) sub-folder.
