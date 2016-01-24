@@ -6,7 +6,7 @@
 -- ported from Claus Tøndering calendar algorithms:
 -- http://www.tondering.dk/main/index.php/calendar-information .
 --
--- Copyright (C) 2011-2015 Stefano Peluchetti. All rights reserved.
+-- Copyright (C) 2011-2016 Stefano Peluchetti. All rights reserved.
 --------------------------------------------------------------------------------
 
 local ffi  = require "ffi"
