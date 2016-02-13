@@ -1,5 +1,5 @@
-TIME - Dates and Periods in Lua
-===============================
+Time: Dates and Periods in Lua
+==============================
 
 A module for the manipulation of dates and periods according to the [Gregorian calendar](http://en.wikipedia.org/wiki/Gregorian_calendar).
 
