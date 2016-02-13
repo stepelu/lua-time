@@ -3,13 +3,15 @@ TIME - Dates and Periods in Lua
 
 A module for the manipulation of dates and periods according to the [Gregorian calendar](http://en.wikipedia.org/wiki/Gregorian_calendar).
 
-Concepts and features:
+## Features:
 
--   `date`: a specific point in time (yesterday at 3:00 PM)
--   `period`: a duration of time (3 hours)
 -   microsecond (1-millionth of a second) precision
 -   leap years are taken into account
 -   leap seconds **not** taken into account
+-   convenience utilities (day of week, leap years, end of month)
+-   current time (local and UTC)
+-   sleep
+-   based on Claus Tøndering's [calendar algorithms](http://www.tondering.dk/main/index.php/calendar-information) and the corresponding C implementation
 
 ```lua
 local time = require "time"
@@ -38,8 +40,6 @@ print(time.nowutc())   -- Now, according to UTC clock.
 time.sleep(time.seconds(1)) -- Sleep for 1 second.
 ```
 
-This module is based on Claus Tøndering's [calendar algorithms](http://www.tondering.dk/main/index.php/calendar-information) and the corresponding C implementation.
-
 ## Install
 
 This module is included in the [ULua](http://ulua.io) distribution, to install it use:
@@ -51,4 +51,4 @@ Alternatively, manually install this module making sure that all dependencies li
 
 ## Documentation
 
-Refer to the [official documentation](http://scilua.org/time.html) which is mirrored in the [`__doc`](__doc) sub-folder.
+Refer to the [official documentation](http://scilua.org/time.html).
