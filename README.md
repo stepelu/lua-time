@@ -3,7 +3,7 @@ TIME - Dates and Periods in Lua
 
 A module for the manipulation of dates and periods according to the [Gregorian calendar](http://en.wikipedia.org/wiki/Gregorian_calendar).
 
-## Features:
+## Features
 
 -   microsecond (1-millionth of a second) precision
 -   leap years are taken into account
